@@ -2,10 +2,20 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Policy, MedicalEvent, EstimationResult, Rider } from "../types";
 
-export const extractPolicyFromImage = async (base64Image: string): Promise<Partial<Policy>> => {
+// Helper to parse base64 data URI
+const parseDataUri = (dataUri: string) => {
+  const mimeType = dataUri.substring(dataUri.indexOf(':') + 1, dataUri.indexOf(';'));
+  const data = dataUri.split(',')[1];
+  return { mimeType, data };
+};
+
+export const extractPolicyFromImage = async (base64Data: string): Promise<Partial<Policy>> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const { mimeType, data } = parseDataUri(base64Data);
+
   const prompt = `
-    Analyze this insurance policy document image. 
+    Analyze this insurance policy document (which may be an image or a PDF). 
     Extract:
     1. Insurance Company Name (e.g. 國泰人壽)
     2. Main Plan Name (The specific commercial name of the policy, e.g., 真安順手術醫療終身保險)
@@ -19,7 +29,7 @@ export const extractPolicyFromImage = async (base64Image: string): Promise<Parti
     contents: {
       parts: [
         { text: prompt },
-        { inlineData: { mimeType: "image/jpeg", data: base64Image.split(',')[1] } }
+        { inlineData: { mimeType: mimeType, data: data } }
       ]
     },
     config: {
@@ -66,12 +76,18 @@ export const estimateClaims = async (
     4. Provide specific advice.
   `;
 
+  // Prepare evidence parts with dynamic mime types
+  const evidenceParts = event.evidenceFiles.map(fileStr => {
+    const { mimeType, data } = parseDataUri(fileStr);
+    return { inlineData: { mimeType, data } };
+  });
+
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: { 
       parts: [
         { text: prompt },
-        ...event.evidenceFiles.map(b => ({ inlineData: { mimeType: "image/jpeg", data: b.split(',')[1] } }))
+        ...evidenceParts
       ] 
     },
     config: {

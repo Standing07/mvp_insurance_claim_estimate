@@ -92,7 +92,8 @@ const Policies: React.FC = () => {
         });
         alert('AI 辨識成功！請檢查並補充資訊。');
       } catch (err) {
-        alert('辨識失敗，請手動填寫。');
+        console.error(err);
+        alert('辨識失敗，請確認檔案格式是否正確。');
       } finally {
         setIsScanning(false);
       }
@@ -178,11 +179,22 @@ const Policies: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <label className="cursor-pointer bg-indigo-50 text-indigo-700 px-5 py-3 rounded-2xl text-sm font-black flex items-center gap-2 border border-indigo-100 hover:bg-indigo-100 transition-all">
-            <i className="fas fa-camera"></i> AI 掃描辨識
-            <input type="file" className="hidden" accept="image/*" onChange={(e) => {
-              handleScan(e);
-              setShowAddModal(true);
-            }} />
+            <div className="flex flex-col items-start text-left">
+              <div className="flex items-center gap-2">
+                <i className="fas fa-file-invoice"></i> 
+                <span>AI 讀取保單</span>
+              </div>
+              <span className="text-[10px] font-medium opacity-60 font-sans">支援 PDF, JPG, PNG</span>
+            </div>
+            <input 
+              type="file" 
+              className="hidden" 
+              accept="application/pdf,image/jpeg,image/png,image/webp" 
+              onChange={(e) => {
+                handleScan(e);
+                setShowAddModal(true);
+              }} 
+            />
           </label>
           <button 
             onClick={() => { setShowAddModal(true); }}
@@ -255,7 +267,7 @@ const Policies: React.FC = () => {
             {isScanning && (
               <div className="mb-8 p-5 bg-indigo-600 rounded-2xl flex items-center gap-4 text-white shadow-lg shadow-indigo-100">
                 <i className="fas fa-spinner fa-spin text-xl"></i>
-                <span className="font-bold tracking-tight">AI 掃描辨識中...</span>
+                <span className="font-bold tracking-tight">AI 掃描辨識中 (支援 PDF)...</span>
               </div>
             )}
 

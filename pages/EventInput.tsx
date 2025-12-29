@@ -79,6 +79,8 @@ const EventInput: React.FC = () => {
     }, 1200);
   };
 
+  const isPdf = (dataUrl: string) => dataUrl.startsWith('data:application/pdf');
+
   return (
     <div className="max-w-3xl mx-auto space-y-10 animate-fadeIn pb-12">
       <div className="text-center">
@@ -194,22 +196,33 @@ const EventInput: React.FC = () => {
         </div>
 
         <div className="pt-6 border-t border-slate-50">
-          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <i className="fas fa-file-signature text-indigo-500"></i> 上傳證明文件 (可選)
+          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2 justify-between">
+            <div className="flex items-center gap-2">
+              <i className="fas fa-file-signature text-indigo-500"></i> 上傳證明文件
+            </div>
+            <span className="text-[10px] text-slate-400 font-normal normal-case border border-slate-200 px-2 py-1 rounded-lg bg-slate-50">支援格式：PDF, JPG, PNG, WEBP</span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {evidenceFiles.map((file, idx) => (
-              <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden shadow-sm group">
-                <img src={file} className="w-full h-full object-cover" alt="preview" />
-                <button type="button" onClick={() => removeFile(idx)} className="absolute top-2 right-2 bg-slate-900/60 text-white w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden shadow-sm group bg-slate-50 border border-slate-100 flex items-center justify-center">
+                {isPdf(file) ? (
+                    <div className="flex flex-col items-center text-rose-500">
+                        <i className="fas fa-file-pdf text-4xl mb-2"></i>
+                        <span className="text-[10px] font-bold">PDF 文件</span>
+                    </div>
+                ) : (
+                    <img src={file} className="w-full h-full object-cover" alt="preview" />
+                )}
+                
+                <button type="button" onClick={() => removeFile(idx)} className="absolute top-2 right-2 bg-slate-900/60 text-white w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <i className="fas fa-trash-can text-xs"></i>
                 </button>
               </div>
             ))}
             <label className="aspect-square border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50/50 hover:border-indigo-200 transition-all text-slate-300">
               <i className="fas fa-plus text-xl mb-1"></i>
-              <span className="text-[10px] font-black uppercase tracking-widest">新增照片</span>
-              <input type="file" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
+              <span className="text-[10px] font-black uppercase tracking-widest">新增檔案</span>
+              <input type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" onChange={handleFileChange} className="hidden" />
             </label>
           </div>
         </div>
