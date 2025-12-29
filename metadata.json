@@ -1,0 +1,7 @@
+{
+  "name": "ClaimEstimate - AI Insurance Advisor",
+  "description": "AI助你理賠知多少：透過 AI 分析您的保單與證明單據，快速估算可能理賠金額，作為後續理賠的參考。",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
