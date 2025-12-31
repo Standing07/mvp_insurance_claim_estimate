@@ -1,0 +1,265 @@
+
+import React, { createContext, useContext, useState } from 'react';
+
+export type Language = 'zh-TW' | 'en-US';
+
+interface LanguageContextType {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: string) => string;
+}
+
+const translations: Record<Language, Record<string, string>> = {
+  'zh-TW': {
+    'app.name': 'ClaimEstimate',
+    'nav.home': '首頁',
+    'nav.policies': '保單管理',
+    'nav.event': '事故報核',
+    'nav.login': '登入 / 註冊',
+    'nav.logout': '登出',
+    'nav.user': '會員',
+    'footer.text': '© 2024 ClaimEstimate AI Advisor. 本工具僅供理賠試算 Benchmark 使用，不具備法律效力。',
+    
+    'home.badge': 'AI 驅動理賠試算',
+    'home.title.prefix': 'AI 助你理賠',
+    'home.title.suffix': '知多少',
+    'home.desc': 'ClaimEstimate 是專為保戶設計的理賠好幫手：透過 AI 分析您的保單與證明單據，快速估算可能理賠金額，作為後續理賠的參考。',
+    'home.btn.policies': '立即管理保單',
+    'home.btn.event': '事故快速模擬',
+    'home.feat1.title': '1. 建立保單庫',
+    'home.feat1.desc': '內建結構化選單，涵蓋各大保險公司與停賣險種，輕鬆建立個人保障清單。',
+    'home.feat2.title': '2. 專業事故模擬',
+    'home.feat2.desc': '細分壽險、醫療、傷害等六大類別，透過選單精確描述事故與診療狀況。',
+    'home.feat3.title': '3. 數據化評估報告',
+    'home.feat3.desc': 'AI 生成詳細的理賠金額預估、溝通技巧建議與理賠要點分析報告。',
+
+    'login.welcome': '歡迎回來',
+    'login.register': '註冊會員',
+    'login.login': '會員登入',
+    'login.desc.register': '建立您的專屬保單資料庫',
+    'login.desc.login': '存取您儲存的保單與試算紀錄',
+    'login.label.name': '顯示名稱',
+    'login.ph.name': '如何稱呼您？',
+    'login.label.email': 'Email (作為帳號識別)',
+    'login.btn.register': '立即註冊',
+    'login.btn.login': '登入系統',
+    'login.switch.toLogin': '已經有帳號？點此登入',
+    'login.switch.toRegister': '還沒有帳號？點此註冊',
+    'login.note': '注意：此為 MVP 版本，資料暫存於此瀏覽器中。請勿清除瀏覽器快取以免資料遺失。',
+
+    'policies.userInfo.title': '被保險人基本資料',
+    'policies.label.name': '姓名',
+    'policies.ph.name': '請輸入姓名',
+    'policies.label.dob': '出生年月日',
+    'policies.title': '保障明細庫',
+    'policies.subtitle': '請輸入保單名稱，讓 AI 為您分析條款',
+    'policies.btn.scan': 'AI 讀取保單',
+    'policies.btn.manual': '手動新增',
+    'policies.btn.save': '存檔',
+    'policies.btn.next': '前往理賠試算',
+    'policies.msg.saved': '保單資料已成功儲存！',
+    'policies.empty': '目前尚無保單資料',
+    'policies.mainCoverage': '主約保額',
+    'policies.riders': '附約項目 (Riders)',
+    'policies.btnAddRider': '新增附約',
+    'policies.modal.title': '新增主約保單',
+    'policies.modal.desc': '請直接輸入保單封面上的名稱，不確定險種可留空。',
+    'policies.modal.company': '保險公司 (必填)',
+    'policies.modal.ph.company': '請選擇保險公司',
+    'policies.modal.plan': '主約名稱 (必填)',
+    'policies.modal.category': '險種分類 (選填，輔助AI判斷)',
+    'policies.modal.ph.category': '不確定 / 未分類',
+    'policies.modal.amount': '主約保額/單位數',
+    'policies.modal.save': '確認儲存',
+    'policies.riderModal.title': '新增附約',
+    'policies.riderModal.name': '附約名稱',
+    'policies.riderModal.category': '附約類別 (選填)',
+    'policies.riderModal.amount': '保額/計畫別',
+    'policies.scan.loading': 'AI 掃描辨識中 (支援 PDF)...',
+    'policies.scan.success': 'AI 辨識成功！請檢查並補充資訊。',
+    'policies.scan.error': '辨識失敗，請檢查 API Key 是否設定正確。',
+    'policies.alert.delete': '刪除這張保單？',
+
+    'event.title': '事故與醫療詳情',
+    'event.desc': '請詳實填寫，讓 AI 能根據收據金額與病況進行精算',
+    'event.type.label': '1. 事故類別 (主要險種關聯)',
+    'event.type.ph': '請輸入事故類別...',
+    'event.treatment.label': '2. 診療/手術概況',
+    'event.treatment.ph': '請選擇治療方式',
+    'event.treatment.ph.select': '請選擇治療方式',
+    'event.treatment.customPh': '請輸入治療方式...',
+    'event.diagnosis.ph': '詳細病名或診斷內容 (例如：右側腹股溝疝氣)',
+    'event.date': '事故日期',
+    'event.days': '住院天數',
+    'event.visits': '門診次數',
+    'event.financials.title': '費用明細',
+    'event.expense.label': '自費金額 (Self-payment)',
+    'event.expense.desc': '請輸入收據上的民眾自費總金額',
+    'event.retained.label': '自負額 (Retained Amount / Deductible)',
+    'event.retained.desc': '若險種有約定自負額，請填寫',
+    'event.retained.optional': '(選填)',
+    'event.files.label': '上傳證明文件',
+    'event.files.note': '支援格式：PDF, JPG, PNG, WEBP',
+    'event.btn.submit': '開始 AI 試算',
+    'event.btn.submitting': '正在生成試算報表...',
+    'event.other': '其他 (自行輸入)',
+    
+    'estimate.loading.title': 'AI 深度分析中...',
+    'estimate.loading.desc': '正在比對各險種條款並模擬理賠審核流程，請稍候。',
+    'estimate.error.title': '發生錯誤',
+    'estimate.back': '回到保單管理',
+    'estimate.result.badge': '試算結果生成完畢',
+    'estimate.result.total': '預估總領理賠金額',
+    'estimate.summary.title': '事故概要紀錄',
+    'estimate.summary.diagnosis': '主要診斷',
+    'estimate.summary.expense': '總支出金額',
+    'estimate.list.title': '險種對比清單',
+    'estimate.status.APPLICABLE': '確定給付',
+    'estimate.status.POTENTIAL': '需爭取',
+    'estimate.status.NOT_APPLICABLE': '不予給付',
+    'estimate.points.title': '理賠核心要點',
+    'estimate.advice.title': '溝通實戰策略',
+    'estimate.btn.print': '匯出理賠參考報告',
+    'estimate.advice.strategy': '溝通話術',
+    'estimate.advice.warning': '重要警示',
+    'estimate.advice.tip': '理賠錦囊'
+  },
+  'en-US': {
+    'app.name': 'ClaimEstimate',
+    'nav.home': 'Home',
+    'nav.policies': 'My Policies',
+    'nav.event': 'Claim Event',
+    'nav.login': 'Login / Register',
+    'nav.logout': 'Logout',
+    'nav.user': 'Member',
+    'footer.text': '© 2024 ClaimEstimate AI Advisor. For benchmark purposes only. Not legal advice.',
+    
+    'home.badge': 'AI-Powered Claim Estimator',
+    'home.title.prefix': 'AI Insurance ',
+    'home.title.suffix': 'Claim Advisor',
+    'home.desc': 'ClaimEstimate helps policyholders: AI analyzes your policies and receipts to quickly estimate claim amounts for your reference.',
+    'home.btn.policies': 'Manage Policies',
+    'home.btn.event': 'Simulate Claim',
+    'home.feat1.title': '1. Policy Portfolio',
+    'home.feat1.desc': 'Structured inputs covering major insurers. Easily build your personal coverage database.',
+    'home.feat2.title': '2. Event Simulation',
+    'home.feat2.desc': 'Covering Life, Medical, Accident, etc. Precisely describe incidents and treatments.',
+    'home.feat3.title': '3. Analysis Report',
+    'home.feat3.desc': 'AI generates estimated amounts, negotiation tips, and key analysis points.',
+
+    'login.welcome': 'Welcome Back',
+    'login.register': 'Register',
+    'login.login': 'Login',
+    'login.desc.register': 'Create your policy database',
+    'login.desc.login': 'Access your saved policies and estimates',
+    'login.label.name': 'Display Name',
+    'login.ph.name': 'What should we call you?',
+    'login.label.email': 'Email (User ID)',
+    'login.btn.register': 'Sign Up',
+    'login.btn.login': 'Sign In',
+    'login.switch.toLogin': 'Already have an account? Login',
+    'login.switch.toRegister': 'No account? Register',
+    'login.note': 'Note: MVP version. Data is saved in this browser. Do not clear cache.',
+
+    'policies.userInfo.title': 'Insured Information',
+    'policies.label.name': 'Name',
+    'policies.ph.name': 'Enter Name',
+    'policies.label.dob': 'Date of Birth',
+    'policies.title': 'Policy Library',
+    'policies.subtitle': 'Enter policy names for AI analysis',
+    'policies.btn.scan': 'AI Scan Policy',
+    'policies.btn.manual': 'Add Manually',
+    'policies.btn.save': 'Save',
+    'policies.btn.next': 'Go to Claim Estimate',
+    'policies.msg.saved': 'Policy data saved successfully!',
+    'policies.empty': 'No policies found',
+    'policies.mainCoverage': 'Main Coverage',
+    'policies.riders': 'Riders',
+    'policies.btnAddRider': 'Add Rider',
+    'policies.modal.title': 'Add Main Policy',
+    'policies.modal.desc': 'Enter the commercial name on the policy cover.',
+    'policies.modal.company': 'Insurance Company',
+    'policies.modal.ph.company': 'Select Company',
+    'policies.modal.plan': 'Plan Name',
+    'policies.modal.category': 'Category (Optional, helps AI)',
+    'policies.modal.ph.category': 'Unknown / Uncategorized',
+    'policies.modal.amount': 'Coverage Amount / Units',
+    'policies.modal.save': 'Save Policy',
+    'policies.riderModal.title': 'Add Rider',
+    'policies.riderModal.name': 'Rider Name',
+    'policies.riderModal.category': 'Rider Category',
+    'policies.riderModal.amount': 'Coverage / Units',
+    'policies.scan.loading': 'AI Scanning (PDF supported)...',
+    'policies.scan.success': 'Scan Successful! Please verify details.',
+    'policies.scan.error': 'Scan failed. Check API Key.',
+    'policies.alert.delete': 'Delete this policy?',
+
+    'event.title': 'Incident & Medical Details',
+    'event.desc': 'Fill in details for AI to calculate based on receipts and diagnosis',
+    'event.type.label': '1. Incident Type',
+    'event.type.ph': 'Enter incident type...',
+    'event.treatment.label': '2. Treatment / Surgery',
+    'event.treatment.ph': 'Select Treatment',
+    'event.treatment.ph.select': 'Select Treatment',
+    'event.treatment.customPh': 'Enter treatment...',
+    'event.diagnosis.ph': 'Detailed Diagnosis (e.g., Right Inguinal Hernia)',
+    'event.date': 'Incident Date',
+    'event.days': 'Hospitalization Days',
+    'event.visits': 'Outpatient Visits',
+    'event.financials.title': 'Financials',
+    'event.expense.label': 'Self-payment Amount',
+    'event.expense.desc': 'Total amount paid by patient (receipt total)',
+    'event.retained.label': 'Deductible / Retained Amount',
+    'event.retained.desc': 'If applicable per policy',
+    'event.retained.optional': '(Optional)',
+    'event.files.label': 'Upload Evidence',
+    'event.files.note': 'Support: PDF, JPG, PNG, WEBP',
+    'event.btn.submit': 'Start AI Estimation',
+    'event.btn.submitting': 'Generating Report...',
+    'event.other': 'Other (Enter manually)',
+
+    'estimate.loading.title': 'AI Analyzing...',
+    'estimate.loading.desc': 'Comparing policy terms and simulating claim process...',
+    'estimate.error.title': 'Error Occurred',
+    'estimate.back': 'Back to Policies',
+    'estimate.result.badge': 'Estimation Complete',
+    'estimate.result.total': 'Est. Total Claim',
+    'estimate.summary.title': 'Event Summary',
+    'estimate.summary.diagnosis': 'Diagnosis',
+    'estimate.summary.expense': 'Total Expense',
+    'estimate.list.title': 'Coverage Breakdown',
+    'estimate.status.APPLICABLE': 'Applicable',
+    'estimate.status.POTENTIAL': 'Potential',
+    'estimate.status.NOT_APPLICABLE': 'N/A',
+    'estimate.points.title': 'Key Evaluation Points',
+    'estimate.advice.title': 'Communication Strategy',
+    'estimate.btn.print': 'Export Report',
+    'estimate.advice.strategy': 'Strategy',
+    'estimate.advice.warning': 'Warning',
+    'estimate.advice.tip': 'Tip'
+  }
+};
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [language, setLanguage] = useState<Language>('zh-TW');
+
+  const t = (key: string): string => {
+    return translations[language][key] || key;
+  };
+
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+};
+
+export const useLanguage = () => {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
+};

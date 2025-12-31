@@ -6,19 +6,24 @@ import Home from './pages/Home';
 import Policies from './pages/Policies';
 import EventInput from './pages/EventInput';
 import Estimate from './pages/Estimate';
+import Login from './pages/Login';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/policies" element={<Policies />} />
-          <Route path="/event" element={<EventInput />} />
-          <Route path="/estimate" element={<Estimate />} />
-        </Routes>
-      </Layout>
-    </Router>
+    <LanguageProvider>
+      <Router>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/policies" element={<Policies />} />
+            <Route path="/event" element={<EventInput />} />
+            <Route path="/estimate" element={<Estimate />} />
+          </Routes>
+        </Layout>
+      </Router>
+    </LanguageProvider>
   );
 };
 

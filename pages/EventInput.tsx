@@ -1,30 +1,32 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MedicalEvent } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const INCIDENT_TYPES = [
-  '疾病 (住院/門診)',
-  '意外傷害 (挫傷/骨折等)',
-  '癌症相關 (確診/治療)',
-  '壽險事故 (失能/死亡)',
-  '重大疾病 (中風/心梗等)',
-  '長期照顧/失能扶助',
-  '其他 (自行輸入)'
+  { zh: '疾病 (住院/門診)', en: 'Disease (Inpatient/Outpatient)' },
+  { zh: '意外傷害 (挫傷/骨折等)', en: 'Accident (Injury/Fracture)' },
+  { zh: '癌症相關 (確診/治療)', en: 'Cancer (Diagnosis/Treatment)' },
+  { zh: '壽險事故 (失能/死亡)', en: 'Life (Disability/Death)' },
+  { zh: '重大疾病 (中風/心梗等)', en: 'Critical Illness (Stroke, etc.)' },
+  { zh: '長期照顧/失能扶助', en: 'Long-term Care' },
+  { zh: '其他 (自行輸入)', en: 'Other (Enter manually)' }
 ];
 
 const TREATMENT_METHODS = [
-  '一般門診 (不含手術)',
-  '門診手術 (不需住院)',
-  '住院手術',
-  '癌症化學/放射線治療',
-  '重大處置 (如血液透析)',
-  '物理復健/職能治療',
-  '其他 (自行輸入)'
+  { zh: '一般門診 (不含手術)', en: 'General Outpatient' },
+  { zh: '門診手術 (不需住院)', en: 'Outpatient Surgery' },
+  { zh: '住院手術', en: 'Inpatient Surgery' },
+  { zh: '癌症化學/放射線治療', en: 'Chemotherapy/Radiotherapy' },
+  { zh: '重大處置 (如血液透析)', en: 'Major Treatment (Dialysis)' },
+  { zh: '物理復健/職能治療', en: 'Rehabilitation' },
+  { zh: '其他 (自行輸入)', en: 'Other (Enter manually)' }
 ];
 
 const EventInput: React.FC = () => {
   const navigate = useNavigate();
+  const { t, language } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [evidenceFiles, setEvidenceFiles] = useState<string[]>([]);
   
@@ -33,6 +35,15 @@ const EventInput: React.FC = () => {
   
   const [treatmentMethod, setTreatmentMethod] = useState('');
   const [customTreatmentMethod, setCustomTreatmentMethod] = useState('');
+
+  const otherLabel = t('event.other');
+
+  useEffect(() => {
+    const currentUser = localStorage.getItem('claimestimate_current_user');
+    if (!currentUser) {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -57,17 +68,20 @@ const EventInput: React.FC = () => {
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
     
-    // Logic to handle "Other" inputs
-    const finalIncidentType = incidentType === '其他 (自行輸入)' ? customIncidentType : incidentType;
-    const finalTreatmentMethod = treatmentMethod === '其他 (自行輸入)' ? customTreatmentMethod : treatmentMethod;
+    // Check if user selected "Other" (localized)
+    const isIncidentOther = incidentType === otherLabel || INCIDENT_TYPES.find(i => (language === 'zh-TW' ? i.zh : i.en) === incidentType)?.en.includes('Other');
+    const isTreatmentOther = treatmentMethod === otherLabel || TREATMENT_METHODS.find(t => (language === 'zh-TW' ? t.zh : t.en) === treatmentMethod)?.en.includes('Other');
+
+    const finalIncidentType = isIncidentOther ? customIncidentType : incidentType;
+    const finalTreatmentMethod = isTreatmentOther ? customTreatmentMethod : treatmentMethod;
 
     const eventData: MedicalEvent = {
       diagnosis: `[${finalIncidentType}] ${formData.get('diagnosis')}`,
       hospitalizationDays: Number(formData.get('hospitalizationDays')),
-      surgeryName: `[${finalTreatmentMethod}] ${formData.get('surgeryName') || '無特定手術'}`,
+      surgeryName: `[${finalTreatmentMethod}] ${formData.get('surgeryName') || 'N/A'}`,
       outpatientVisits: Number(formData.get('outpatientVisits')),
       totalExpense: Number(formData.get('totalExpense')),
-      retainedAmount: Number(formData.get('retainedAmount') || 0), // Optional Deductible
+      retainedAmount: Number(formData.get('retainedAmount') || 0), 
       incidentDate: formData.get('incidentDate') as string,
       evidenceFiles: evidenceFiles
     };
@@ -84,62 +98,66 @@ const EventInput: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-10 animate-fadeIn pb-12">
       <div className="text-center">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">事故與醫療詳情</h2>
-        <p className="text-slate-500 mt-2 font-medium">請詳實填寫，讓 AI 能根據收據金額與病況進行精算</p>
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight">{t('event.title')}</h2>
+        <p className="text-slate-500 mt-2 font-medium">{t('event.desc')}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 space-y-8">
         
-        {/* Incident Type */}
         <div className="md:col-span-2">
-          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">1. 事故類別 (主要險種關聯)</label>
+          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{t('event.type.label')}</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {INCIDENT_TYPES.map(type => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setIncidentType(type)}
-                className={`px-4 py-3 rounded-2xl text-xs font-bold border transition-all ${
-                  incidentType === type 
-                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' 
-                    : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-indigo-200'
-                }`}
-              >
-                {type}
-              </button>
-            ))}
+            {INCIDENT_TYPES.map(type => {
+              const label = language === 'zh-TW' ? type.zh : type.en;
+              return (
+                <button
+                  key={type.en}
+                  type="button"
+                  onClick={() => setIncidentType(label)}
+                  className={`px-4 py-3 rounded-2xl text-xs font-bold border transition-all ${
+                    incidentType === label 
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' 
+                      : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-indigo-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
-          {incidentType === '其他 (自行輸入)' && (
+          {(incidentType === otherLabel || incidentType.includes('Other') || incidentType.includes('其他')) && (
             <input 
               required
               value={customIncidentType}
               onChange={e => setCustomIncidentType(e.target.value)}
-              placeholder="請輸入事故類別..." 
+              placeholder={t('event.type.ph')}
               className="mt-3 w-full px-5 py-3 bg-indigo-50 border border-indigo-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold animate-fadeIn"
             />
           )}
           <input type="hidden" required name="incident_type" value={incidentType} />
         </div>
 
-        {/* Diagnosis & Treatment */}
         <div className="md:col-span-2 space-y-4">
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">2. 診療/手術概況</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{t('event.treatment.label')}</label>
             <select 
               required
               value={treatmentMethod}
               onChange={e => setTreatmentMethod(e.target.value)}
               className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
             >
-              <option value="">請選擇治療方式</option>
-              {TREATMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+              <option value="">{t('event.treatment.ph.select')}</option>
+              {TREATMENT_METHODS.map(m => {
+                 const label = language === 'zh-TW' ? m.zh : m.en;
+                 return <option key={m.en} value={label}>{label}</option>
+              })}
             </select>
-            {treatmentMethod === '其他 (自行輸入)' && (
+            {(treatmentMethod === otherLabel || treatmentMethod.includes('Other') || treatmentMethod.includes('其他')) && (
               <input 
                 required
                 value={customTreatmentMethod}
                 onChange={e => setCustomTreatmentMethod(e.target.value)}
-                placeholder="請輸入治療方式..." 
+                placeholder={t('event.treatment.customPh')} 
                 className="mt-3 w-full px-5 py-3 bg-indigo-50 border border-indigo-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold animate-fadeIn"
               />
             )}
@@ -147,38 +165,35 @@ const EventInput: React.FC = () => {
           <input 
             required 
             name="diagnosis" 
-            placeholder="詳細病名或診斷內容 (例如：右側腹股溝疝氣)" 
+            placeholder={t('event.diagnosis.ph')}
             className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold" 
           />
         </div>
 
-        {/* Date */}
         <div>
-          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">事故日期</label>
+          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{t('event.date')}</label>
           <input required name="incidentDate" type="date" className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold" />
         </div>
 
-        {/* Duration */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">住院天數</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{t('event.days')}</label>
             <input required name="hospitalizationDays" type="number" min="0" defaultValue="0" className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold" />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">門診次數</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{t('event.visits')}</label>
             <input required name="outpatientVisits" type="number" min="0" defaultValue="0" className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold" />
           </div>
         </div>
 
-        {/* Financials - Split into Self-Pay and Retained */}
         <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 space-y-6">
            <h4 className="text-sm font-black text-slate-700 flex items-center gap-2">
-             <i className="fas fa-coins text-indigo-600"></i> 費用明細
+             <i className="fas fa-coins text-indigo-600"></i> {t('event.financials.title')}
            </h4>
            
            <div className="md:col-span-2">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">自費金額 (Self-payment) <span className="text-rose-500">*</span></label>
-            <p className="text-xs text-slate-400 mb-2">請輸入收據上的民眾自費總金額</p>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('event.expense.label')} <span className="text-rose-500">*</span></label>
+            <p className="text-xs text-slate-400 mb-2">{t('event.expense.desc')}</p>
             <div className="relative">
               <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">$</span>
               <input required name="totalExpense" type="number" placeholder="0" className="w-full pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono font-bold text-xl text-indigo-600" />
@@ -186,8 +201,8 @@ const EventInput: React.FC = () => {
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">自負額 (Retained Amount / Deductible) <span className="text-slate-300 font-medium normal-case">(選填)</span></label>
-            <p className="text-xs text-slate-400 mb-2">若險種有約定自負額，請填寫</p>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('event.retained.label')} <span className="text-slate-300 font-medium normal-case">{t('event.retained.optional')}</span></label>
+            <p className="text-xs text-slate-400 mb-2">{t('event.retained.desc')}</p>
             <div className="relative">
               <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">$</span>
               <input name="retainedAmount" type="number" placeholder="0" className="w-full pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-slate-400 outline-none font-mono font-bold text-lg text-slate-600" />
@@ -198,9 +213,9 @@ const EventInput: React.FC = () => {
         <div className="pt-6 border-t border-slate-50">
           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2 justify-between">
             <div className="flex items-center gap-2">
-              <i className="fas fa-file-signature text-indigo-500"></i> 上傳證明文件
+              <i className="fas fa-file-signature text-indigo-500"></i> {t('event.files.label')}
             </div>
-            <span className="text-[10px] text-slate-400 font-normal normal-case border border-slate-200 px-2 py-1 rounded-lg bg-slate-50">支援格式：PDF, JPG, PNG, WEBP</span>
+            <span className="text-[10px] text-slate-400 font-normal normal-case border border-slate-200 px-2 py-1 rounded-lg bg-slate-50">{t('event.files.note')}</span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {evidenceFiles.map((file, idx) => (
@@ -208,7 +223,7 @@ const EventInput: React.FC = () => {
                 {isPdf(file) ? (
                     <div className="flex flex-col items-center text-rose-500">
                         <i className="fas fa-file-pdf text-4xl mb-2"></i>
-                        <span className="text-[10px] font-bold">PDF 文件</span>
+                        <span className="text-[10px] font-bold">PDF</span>
                     </div>
                 ) : (
                     <img src={file} className="w-full h-full object-cover" alt="preview" />
@@ -221,7 +236,7 @@ const EventInput: React.FC = () => {
             ))}
             <label className="aspect-square border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50/50 hover:border-indigo-200 transition-all text-slate-300">
               <i className="fas fa-plus text-xl mb-1"></i>
-              <span className="text-[10px] font-black uppercase tracking-widest">新增檔案</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">ADD</span>
               <input type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" onChange={handleFileChange} className="hidden" />
             </label>
           </div>
@@ -234,7 +249,7 @@ const EventInput: React.FC = () => {
             isSubmitting || !incidentType ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100 active:scale-95'
           }`}
         >
-          {isSubmitting ? <><i className="fas fa-spinner fa-spin"></i> 正在生成試算報表...</> : <><i className="fas fa-bolt"></i> 開始 AI 試算</>}
+          {isSubmitting ? <><i className="fas fa-spinner fa-spin"></i> {t('event.btn.submitting')}</> : <><i className="fas fa-bolt"></i> {t('event.btn.submit')}</>}
         </button>
       </form>
     </div>
