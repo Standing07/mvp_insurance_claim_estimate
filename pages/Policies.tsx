@@ -72,6 +72,37 @@ const Policies: React.FC = () => {
     localStorage.setItem(`claimestimate_user_info_${userId}`, JSON.stringify(info));
   };
 
+  const loadDemoData = () => {
+    if (!confirm(language === 'zh-TW' ? '要載入範例保單嗎？這將會清除您目前未儲存的輸入。' : 'Load demo data?')) return;
+    
+    const demoPolicies: Policy[] = [
+      {
+        id: 'demo-1',
+        company: '國泰人壽 (Cathay Life)',
+        mainPlanName: '真安心住院醫療終身保險',
+        mainPlanCategory: '住院醫療 (實支實付)',
+        mainCoverageAmount: 1000,
+        riders: [
+          { id: 'r1', name: '真全意住院醫療健康保險附約', category: '住院醫療 (實支實付)', coverageAmount: 10, description: '計畫M-10' },
+          { id: 'r2', name: '新真全意住院醫療健康保險附約', category: '住院醫療 (日額型)', coverageAmount: 1000, description: '日額1000' }
+        ]
+      },
+      {
+        id: 'demo-2',
+        company: '富邦人壽 (Fubon Life)',
+        mainPlanName: '享安心意外傷害保險',
+        mainPlanCategory: '意外傷害 (死殘/醫療)',
+        mainCoverageAmount: 1000000,
+        riders: [
+          { id: 'r3', name: '傷害醫療保險附約', category: '意外傷害 (死殘/醫療)', coverageAmount: 50000, description: 'MR 5萬' }
+        ]
+      }
+    ];
+    saveToStorage(demoPolicies);
+    setUserInfo({ name: language === 'zh-TW' ? '王小明' : 'John Doe', dob: '1990-01-01' });
+    alert(t('policies.msg.saved'));
+  };
+
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -152,9 +183,17 @@ const Policies: React.FC = () => {
   return (
     <div className="space-y-8 animate-fadeIn pb-12">
       <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
-        <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-          <i className="fas fa-user-circle text-indigo-600"></i> {t('policies.userInfo.title')}
-        </h3>
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i className="fas fa-user-circle text-indigo-600"></i> {t('policies.userInfo.title')}
+          </h3>
+          <button 
+             onClick={loadDemoData}
+             className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded-full transition-colors"
+          >
+            <i className="fas fa-magic mr-1"></i> {t('policies.btn.demo')}
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{t('policies.label.name')}</label>
@@ -215,7 +254,13 @@ const Policies: React.FC = () => {
             <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200">
               <i className="fas fa-file-contract text-3xl"></i>
             </div>
-            <p className="text-slate-400 font-bold">{t('policies.empty')}</p>
+            <p className="text-slate-400 font-bold mb-4">{t('policies.empty')}</p>
+            <button 
+               onClick={loadDemoData}
+               className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline"
+            >
+              {t('policies.btn.demo')}
+            </button>
           </div>
         ) : (
           policies.map(policy => (
@@ -261,7 +306,6 @@ const Policies: React.FC = () => {
         )}
       </div>
 
-      {/* ACTION BUTTONS: This section was missing in your local file */}
       <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-8 border-t border-slate-100">
         <button
           onClick={() => alert(t('policies.msg.saved'))}
