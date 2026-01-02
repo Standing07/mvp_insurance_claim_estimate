@@ -2,6 +2,14 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Policy, MedicalEvent, EstimationResult } from "../types";
 
+// Declare process to support strict usage of process.env.API_KEY as per guidelines.
+// This prevents TypeScript errors when types/node is not fully loaded.
+declare const process: {
+  env: {
+    API_KEY: string;
+  }
+};
+
 // Helper to reliably extract JSON object from string
 const cleanJsonString = (str: string): string => {
   if (!str) return "{}";
@@ -15,26 +23,13 @@ const cleanJsonString = (str: string): string => {
   return str.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
 };
 
-const getApiKey = () => {
-  // Try multiple ways to get the key
-  // @ts-ignore
-  let key = process.env.API_KEY;
-  
-  // @ts-ignore
-  if (!key && import.meta.env && import.meta.env.VITE_API_KEY) {
-    // @ts-ignore
-    key = import.meta.env.VITE_API_KEY;
-  }
-
-  return key;
-};
-
 export const extractPolicyFromImage = async (base64Data: string, language: 'zh-TW' | 'en-US'): Promise<Partial<Policy>> => {
-  const apiKey = getApiKey();
+  // Use process.env.API_KEY directly. Vite's define plugin will replace this string at build time.
+  const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
     console.error("API Key is missing in extractPolicyFromImage");
-    throw new Error("System API Key is missing. Please check your .env file.");
+    throw new Error("System API Key is missing. Please check your .env file or Vercel settings.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -56,7 +51,7 @@ export const extractPolicyFromImage = async (base64Data: string, language: 'zh-T
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview", 
+      model: "gemini-2.0-flash", 
       contents: {
         parts: [
           { text: prompt },
@@ -89,11 +84,11 @@ export const estimateClaims = async (
   event: MedicalEvent,
   language: 'zh-TW' | 'en-US'
 ): Promise<EstimationResult> => {
-  const apiKey = getApiKey();
+  const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
     console.error("API Key is missing in estimateClaims");
-    throw new Error("System API Key is missing. Please check your .env file.");
+    throw new Error("System API Key is missing. Please check your .env file or Vercel settings.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -135,7 +130,7 @@ export const estimateClaims = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: { 
         parts: [
           { text: prompt },
@@ -184,7 +179,6 @@ export const estimateClaims = async (
     const cleanedText = cleanJsonString(response.text || "{}");
     const parsed = JSON.parse(cleanedText);
 
-    // Ensure strict type safety and defaults
     return {
       summary: parsed.summary || (language === 'zh-TW' ? "AI 分析完成，請參考下方明細。" : "Analysis complete."),
       totalEstimatedAmount: typeof parsed.totalEstimatedAmount === 'number' ? parsed.totalEstimatedAmount : 0,
@@ -195,11 +189,9 @@ export const estimateClaims = async (
 
   } catch (e: any) {
     console.error("Gemini API Error (estimateClaims):", e);
-    // Return a more user-friendly error
     if (e.message && e.message.includes('API key')) {
       throw new Error("Invalid API Key. Please check settings.");
     }
-    // Fallback result for empty/failed parsing to keep UI alive
     return {
         summary: language === 'zh-TW' ? "AI 分析過程發生異常，無法產生完整報告。" : "AI Analysis failed to generate a full report.",
         totalEstimatedAmount: 0,
