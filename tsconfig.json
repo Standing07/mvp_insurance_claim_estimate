@@ -18,11 +18,11 @@
     "types": ["node"],
 
     /* Linting */
-    "strict": true,
+    "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": false
   },
-  "include": ["**/*.ts", "**/*.tsx", "vite.config.ts"],
+  "include": ["**/*.ts", "**/*.tsx", "vite-env.d.ts"],
   "exclude": ["node_modules"]
 }

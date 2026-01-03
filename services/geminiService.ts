@@ -1,35 +1,23 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Policy, MedicalEvent, EstimationResult } from "../types";
 
-// Declare process to support strict usage of process.env.API_KEY as per guidelines.
-// This prevents TypeScript errors when types/node is not fully loaded.
-declare const process: {
-  env: {
-    API_KEY: string;
-  }
-};
-
 // Helper to reliably extract JSON object from string
-const cleanJsonString = (str: string): string => {
+const cleanJsonString = (str: string) => {
   if (!str) return "{}";
-  // Try to find the first '{' and last '}'
   const firstBrace = str.indexOf('{');
   const lastBrace = str.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1) {
     return str.substring(firstBrace, lastBrace + 1);
   }
-  // Fallback regex cleanup
   return str.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
 };
 
 export const extractPolicyFromImage = async (base64Data: string, language: 'zh-TW' | 'en-US'): Promise<Partial<Policy>> => {
-  // Use process.env.API_KEY directly. Vite's define plugin will replace this string at build time.
   const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
-    console.error("API Key is missing in extractPolicyFromImage");
-    throw new Error("System API Key is missing. Please check your .env file or Vercel settings.");
+    console.error("API Key is missing");
+    throw new Error("System API Key is missing.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -40,18 +28,13 @@ export const extractPolicyFromImage = async (base64Data: string, language: 'zh-T
   const prompt = `
     Analyze this insurance policy document. 
     Language Context: ${language}
-    
-    Extract:
-    1. Insurance Company Name
-    2. Main Plan Name (The specific commercial name)
-    3. Main Coverage Amount (numeric value only)
-    
+    Extract: Company Name, Plan Name, Coverage Amount.
     Output strictly valid JSON.
   `;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash", 
+      model: "gemini-3-flash-preview", 
       contents: {
         parts: [
           { text: prompt },
@@ -75,7 +58,7 @@ export const extractPolicyFromImage = async (base64Data: string, language: 'zh-T
     return JSON.parse(text);
   } catch (e) {
     console.error("Gemini API Error (extractPolicy):", e);
-    throw new Error("Failed to scan policy. Check console for details.");
+    throw new Error("Failed to scan policy.");
   }
 };
 
@@ -87,8 +70,8 @@ export const estimateClaims = async (
   const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
-    console.error("API Key is missing in estimateClaims");
-    throw new Error("System API Key is missing. Please check your .env file or Vercel settings.");
+    console.error("API Key is missing");
+    throw new Error("System API Key is missing.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -96,30 +79,16 @@ export const estimateClaims = async (
   const langName = language === 'zh-TW' ? 'Traditional Chinese (繁體中文)' : 'English';
 
   const prompt = `
-    You are an expert insurance claim adjuster.
-    
-    TASK: Calculate estimated claim amounts based on the Policies and Medical Incident provided below.
-    OUTPUT LANGUAGE: ${langName}. ALL fields (summary, reason, advice content) MUST be in ${langName}.
+    Act as an expert insurance claim adjuster.
+    TASK: Calculate estimated claim amounts based strictly on the policies and medical event provided.
+    OBJECTIVE: Provide a factual estimation of how much can be claimed. Do not judge the quality of the policy.
     
     [INPUT DATA]
     POLICIES: ${JSON.stringify(policies)}
     INCIDENT: ${JSON.stringify(event)}
     
-    [CALCULATION RULES]
-    1. Match the 'incident_type' and 'surgery/treatment' to the policy coverage.
-    2. For 'Daily Hospitalization Benefit': Amount = Days * Daily Rate.
-    3. For 'Surgery Benefit': Estimate percentage based on surgery name.
-    4. For 'Reimbursement' (實支實付): 
-       - If totalExpense > limit, Amount = limit.
-       - If totalExpense <= limit, Amount = totalExpense.
-       - Deduct 'retainedAmount' if applicable.
-    
-    [OUTPUT INSTRUCTION]
-    - Return STRICT JSON format.
-    - NO markdown backticks.
-    - 'estimatedAmount' MUST be a Number.
-    - 'status' must be: 'APPLICABLE', 'POTENTIAL', or 'NOT_APPLICABLE'.
-    - 'componentName' should be the policy name or coverage name in ${langName}.
+    OUTPUT LANGUAGE: ${langName}.
+    Return STRICT JSON.
   `;
 
   const evidenceParts = event.evidenceFiles.map(fileStr => {
@@ -130,7 +99,7 @@ export const estimateClaims = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3-flash-preview",
       contents: { 
         parts: [
           { text: prompt },
@@ -180,23 +149,20 @@ export const estimateClaims = async (
     const parsed = JSON.parse(cleanedText);
 
     return {
-      summary: parsed.summary || (language === 'zh-TW' ? "AI 分析完成，請參考下方明細。" : "Analysis complete."),
+      summary: parsed.summary || "Analysis complete.",
       totalEstimatedAmount: typeof parsed.totalEstimatedAmount === 'number' ? parsed.totalEstimatedAmount : 0,
       items: Array.isArray(parsed.items) ? parsed.items : [],
       evaluationPoints: Array.isArray(parsed.evaluationPoints) ? parsed.evaluationPoints : [],
       communicationAdvice: Array.isArray(parsed.communicationAdvice) ? parsed.communicationAdvice : []
     };
 
-  } catch (e: any) {
-    console.error("Gemini API Error (estimateClaims):", e);
-    if (e.message && e.message.includes('API key')) {
-      throw new Error("Invalid API Key. Please check settings.");
-    }
+  } catch (e) {
+    console.error("Gemini API Error:", e);
     return {
-        summary: language === 'zh-TW' ? "AI 分析過程發生異常，無法產生完整報告。" : "AI Analysis failed to generate a full report.",
+        summary: "Analysis failed.",
         totalEstimatedAmount: 0,
         items: [],
-        evaluationPoints: [language === 'zh-TW' ? "請檢查輸入資料是否完整。" : "Please check your input data."],
+        evaluationPoints: [],
         communicationAdvice: []
     }
   }

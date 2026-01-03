@@ -43,7 +43,7 @@ const Estimate: React.FC = () => {
 
       try {
         const estimation = await estimateClaims(policies, event, language);
-        // Force at least an empty object structure if estimation returns null somehow
+        // Force structure if estimation returns null
         setResult(estimation || { 
             summary: "", 
             totalEstimatedAmount: 0, 
@@ -103,22 +103,30 @@ const Estimate: React.FC = () => {
   };
 
   return (
-    <div className="space-y-12 animate-fadeIn max-w-5xl mx-auto pb-24">
-      <div className="bg-white rounded-[3rem] p-12 shadow-2xl shadow-slate-200/50 border border-slate-100 flex flex-col lg:flex-row gap-12 items-center">
-        <div className="flex-1 space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black tracking-widest uppercase">
-            {t('estimate.result.badge')}
+    <div className="space-y-8 animate-fadeIn max-w-5xl mx-auto pb-24">
+      
+      {/* 1. Main Estimate Result */}
+      <div className="bg-white rounded-[3rem] p-12 shadow-sm border border-slate-100 flex flex-col lg:flex-row gap-12 items-center relative overflow-hidden">
+        {/* Decorative Background */}
+        <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+           <i className="fas fa-calculator text-9xl"></i>
+        </div>
+
+        <div className="flex-1 space-y-6 relative z-10">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4">
+               <i className="fas fa-circle-info"></i> {language === 'zh-TW' ? '僅供估算參考 Reference Only' : 'Reference Only'}
+            </div>
+            <h2 className="text-5xl font-black text-slate-900 leading-[1.1]">
+              {t('estimate.result.total')} <br/>
+              <span className="text-indigo-600 font-mono text-6xl drop-shadow-sm">NT$ {(result?.totalEstimatedAmount || 0).toLocaleString()}</span>
+            </h2>
           </div>
-          <h2 className="text-5xl font-black text-slate-900 leading-[1.1]">
-            {t('estimate.result.total')} <br/>
-            {/* Added fallback to 0 and toLocaleString() */}
-            <span className="text-indigo-600 font-mono text-6xl drop-shadow-sm">NT$ {(result?.totalEstimatedAmount || 0).toLocaleString()}</span>
-          </h2>
-          <p className="text-slate-500 text-lg font-medium leading-relaxed italic">
+          <p className="text-slate-500 text-lg font-medium leading-relaxed italic border-l-4 border-indigo-100 pl-4">
             「{result?.summary || '...' }」
           </p>
         </div>
-        <div className="w-full lg:w-80 space-y-4">
+        <div className="w-full lg:w-80 space-y-4 relative z-10">
           <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
             <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">{t('estimate.summary.title')}</h4>
             <div className="space-y-3 text-sm font-bold text-slate-700">
@@ -135,13 +143,13 @@ const Estimate: React.FC = () => {
         </div>
       </div>
 
+      {/* 2. Details & Advice Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         <div className="lg:col-span-7 space-y-8">
           <div className="flex items-center justify-between px-2">
             <h3 className="text-2xl font-black text-slate-900 tracking-tight">{t('estimate.list.title')}</h3>
           </div>
           <div className="space-y-5">
-            {/* Added safe check for empty items array */}
             {(!result?.items || result.items.length === 0) && (
                 <div className="text-center py-10 text-slate-400 font-medium bg-slate-50 rounded-[2rem]">
                     {language === 'zh-TW' ? '暫無符合的理賠項目' : 'No applicable coverage found.'}
@@ -175,22 +183,19 @@ const Estimate: React.FC = () => {
         </div>
 
         <div className="lg:col-span-5 space-y-10">
-          <section className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-              <i className="fas fa-file-shield text-8xl"></i>
-            </div>
-            <h3 className="text-xl font-black mb-8 flex items-center gap-3 relative">
-              <i className="fas fa-microscope text-indigo-400"></i> {t('estimate.points.title')}
+          <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
+            <h3 className="text-xl font-black mb-8 flex items-center gap-3 relative text-slate-900">
+              <i className="fas fa-microscope text-indigo-600"></i> {t('estimate.points.title')}
             </h3>
             <ul className="space-y-6 relative">
               {(result?.evaluationPoints || []).map((point, idx) => (
-                <li key={idx} className="flex gap-4 text-sm text-slate-300 leading-relaxed group">
-                  <span className="w-6 h-6 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0 text-xs font-black text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all">{idx+1}</span>
+                <li key={idx} className="flex gap-4 text-sm text-slate-600 leading-relaxed group">
+                  <span className="w-6 h-6 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 text-xs font-black text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">{idx+1}</span>
                   {point}
                 </li>
               ))}
               {(!result?.evaluationPoints || result.evaluationPoints.length === 0) && (
-                  <li className="text-slate-500 text-sm italic">{language === 'zh-TW' ? '無特別注意事項' : 'No key points.'}</li>
+                  <li className="text-slate-400 text-sm italic">{language === 'zh-TW' ? '無特別注意事項' : 'No key points.'}</li>
               )}
             </ul>
           </section>
