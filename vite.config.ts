@@ -4,8 +4,8 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
-  // process.cwd() is valid in vite.config.ts because it runs in Node.js environment
-  const env = loadEnv(mode, process.cwd(), '');
+  // Using '.' instead of process.cwd() avoids type errors if @types/node is missing.
+  const env = loadEnv(mode, '.', '');
   
   // Priority: 
   // 1. VITE_API_KEY (Standard Vite way)
@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
   const apiKey = env.VITE_API_KEY || env.API_KEY || process.env.API_KEY;
 
   return {
+    // Vercel 預設使用根目錄，不需要 base: './'
     plugins: [react()],
     define: {
       // Inject the key globally so 'process.env.API_KEY' works in the browser
